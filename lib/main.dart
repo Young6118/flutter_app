@@ -7,77 +7,19 @@ class MyApp extends StatelessWidget {
   // 应用的根组件
   @override
   Widget build(BuildContext context) {
-
     return MaterialApp(
       title: '欢迎使用新青柚天气',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal,
       ),
-      // home: MyHomePage(title: '新青柚天气'),
       home: RandomWords(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // final wordPair = WordPair.random();
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center 是一个布局组件，它是一个定位于父组件中间的独立子组件
-        child: Column(
-          // Column 也是一个布局组件，它其中包含一个垂直排列的子组件的列表。
-          // 它的尺寸自适应于子组件的水平尺寸，并且和父组件高度相同。
-          // Column组件有很多属性去控制它自身的尺寸和子组件们的排列方式。
-          // 在这里我们使用坐标对齐方式来垂直居中摆放子组件。坐标是纵坐标，因为一列就是纵向的。
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '今日天气',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
-            // Text(wordPair.asPascalCase), // 帕斯卡类型单词，首字母大写的驼峰式命名方法
-            RandomWords(),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-
 class RandomWordsState extends State<RandomWords> {
-
+  // Set 元组不允许重复元素，不同于 List
+  final Set<WordPair> _saved = Set<WordPair>();
   final _suggestions = <WordPair>[];
   final _biggerFont = const TextStyle(fontSize: 18.0);
 
@@ -96,23 +38,75 @@ class RandomWordsState extends State<RandomWords> {
   }
 
   Widget _buildRow(WordPair pair) {
+    final bool alreadySaved = _saved.contains(pair);
     return ListTile(
       title: Text(
         pair.asPascalCase,
         style: _biggerFont,
       ),
+      trailing: Icon(
+        alreadySaved ? Icons.favorite : Icons.favorite_border,
+        color: alreadySaved ? Colors.red : null,
+      ),
+      onTap: () {
+        //  setState 之后会重新 build 组件
+        setState(() {
+          if (alreadySaved) {
+            _saved.remove(pair);
+          } else {
+            _saved.add(pair);
+          }
+        });
+      },
     );
   }
 
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('单词本')
-      ),
-      body: _buildSuggestions()
-    );
-  }
+    void _pushSaved() {
+      // 导航切换路由到新页面
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) {
+            // 遍历 _saved 元组生成可迭代的 ListTile 实例 tiles
+            final Iterable<ListTile> tiles = _saved.map(
+              (WordPair pair) {
+                return ListTile(
+                  title: Text(
+                    pair.asPascalCase,
+                    style: _biggerFont,
+                  ),
+                );
+              },
+            );
 
+            // 列表组件 toList() 方法生成列表
+            final List<Widget> divided = ListTile.divideTiles(
+              context: context,
+              tiles: tiles,
+            ).toList();
+
+            return Scaffold(
+              appBar: AppBar(
+                title: Text('收藏夹'),
+              ),
+              // ListView 组件，包含 divided 组件
+              body: ListView(children: divided),
+            ); 
+          },
+        ),
+      );
+    }
+
+    return Scaffold(
+        appBar: AppBar(
+            title: Text('单词本'),
+            actions: <Widget>[
+              IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
+            ],
+          ),
+          body: _buildSuggestions()
+        );
+  }
 }
 
 class RandomWords extends StatefulWidget {
